@@ -1,18 +1,18 @@
+import torch
 import torchvision
+from torch import nn
 from torch.utils.data import DataLoader
-from model import *
-# 准备数据集
+
+# 定义训练的设备
+device = torch.device('cuda')
+print(device)
 train_data = torchvision.datasets.CIFAR10(root='./dataset',train=True,transform=torchvision.transforms.ToTensor(),download=True)
 
 test_data = torchvision.datasets.CIFAR10(root='./dataset',train=False,transform=torchvision.transforms.ToTensor(),download=True)
 
-train_data_size = len(train_data)
-test_data_size = len(test_data)
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 train_data_loader = DataLoader(train_data,batch_size=64)
 test_data_loader = DataLoader(test_data,batch_size=64)
+
 class MyModel(nn.Module):
     def __init__(self):
         super(MyModel,self).__init__()
@@ -32,31 +32,32 @@ class MyModel(nn.Module):
         return x
 
 
-myModel = MyModel().to(device)
+model = MyModel()
+model.to(device)
 
-loss_fn = nn.CrossEntropyLoss().to(device)  # 将损失函数迁移到 GPU
-#优化器
-optmizer = torch.optim.SGD(myModel.parameters(),0.01)
+loss_fn = nn.CrossEntropyLoss()
+loss_fn = loss_fn.to(device)
+
+
+optmizer = torch.optim.SGD(model.parameters(),0.01)
 
 #设置训练网络的参数
 total_train_step = 0
 total_test_step = 10
-epoch = 20
+epoch = 10
+
 
 for i in range(epoch):
     print('第{}轮'.format(i+1))
     for data in train_data_loader:
         imgs,targets = data
-        imgs, targets = imgs.to(device), targets.to(device)  # 将数据迁移到 GPU
-        outputs = myModel(imgs)
+        imgs =imgs.to(device)
+        targets = targets.to(device)
+        outputs = model(imgs)
         loss = loss_fn(outputs,targets)
-
-
         optmizer.zero_grad()
         loss.backward()
         optmizer.step()
 
         total_train_step = total_train_step+1
-        # print("训练次数：{},loss：{}".format(total_train_step,loss.item()))
-    torch.save(myModel, f'model_epoch_{i + 1}.pth')
-    print('已保存：{}'.format(i+1))
+        print("训练次数：{},loss：{}".format(total_train_step,loss.item()))
